@@ -1,0 +1,66 @@
+import numpy as np
+import pandas as pd
+import tensorflow as tf
+import matplotlib.pyplot as plt
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import MinMaxScaler
+from sklearn.metrics import accuracy_score, confusion_matrix
+
+
+data=pd.read_csv(r"E:\Downloads\ecg.csv")
+data.dropna(inplace=True)
+x=data.iloc[:, :-1].values
+y=data.iloc[:, -1].values
+x_train,x_test,y_train,y_test=train_test_split(x,y,test_size=0.2,random_state=42)
+scaler=MinMaxScaler()
+x_train=scaler.fit_transform(x_train)
+x_test=scaler.fit_transform(x_test)
+
+
+
+n = x_train.shape[1]
+
+model = tf.keras.Sequential([
+    tf.keras.layers.Input(shape=(n,)),
+    tf.keras.layers.Dense(64, activation='relu'),
+    tf.keras.layers.Dense(32, activation='relu'),
+    tf.keras.layers.Dense(16, activation='relu'),
+    tf.keras.layers.Dense(8, activation='relu'),
+    tf.keras.layers.Dense(16, activation='relu'),
+    tf.keras.layers.Dense(32, activation='relu'),
+    tf.keras.layers.Dense(64, activation='relu'),
+    tf.keras.layers.Dense(n, activation='sigmoid')
+])
+
+
+
+model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=0.01),
+              loss='mse',
+              metrics=['mae'])
+
+
+
+history = model.fit(x_train, x_train,
+                    epochs=20,
+                    batch_size=512,
+                    validation_data=(x_test, x_test))
+
+
+pred = model.predict(x_test)
+
+error = np.mean((x_test - pred)**2, axis=1)
+
+threshold = np.mean(error) + np.std(error)
+
+y_pred = (error > threshold).astype(int)
+
+
+
+print("Accuracy:", accuracy_score(y_test, y_pred))
+
+cm = confusion_matrix(y_test, y_pred)
+plt.imshow(cm)
+plt.colorbar()
+plt.xlabel("Predicted")
+plt.ylabel("Actual")
+plt.show()
